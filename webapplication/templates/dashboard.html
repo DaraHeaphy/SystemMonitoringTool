@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Metrics Dashboard</title>
+
+  <!-- Load Google Charts for Gauges -->
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+  <!-- Load Chart.js for Network Usage and Crypto Price Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Global Styling */
+    body {
+      background-color: #1e1e1e;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    /* Navigation Bar */
+    .navbar {
+      background-color: #333;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      padding: 15px;
+    }
+
+    .navbar a {
+      color: white;
+      text-decoration: none;
+      padding: 14px 20px;
+      font-size: 18px;
+      transition: background 0.3s;
+    }
+
+    .navbar a:hover {
+      background-color: #575757;
+      border-radius: 5px;
+    }
+
+    /* Section Styling */
+    h1, h2 {
+      color: #f1c40f;
+    }
+
+    /* Gauges */
+    .gauges {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    /* Chart Styling */
+    .chart-container {
+      width: 80%;
+      margin: 20px auto;
+      background: #2c2c2c;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    canvas {
+      background-color: #2c2c2c;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    /* Filter Dropdown */
+    .filter-section {
+      margin: 20px auto;
+      width: 80%;
+      text-align: left;
+    }
+    .filter-section label, .filter-section select {
+      font-size: 16px;
+      color: #333;
+    }
+  </style>
+
+  <script type="text/javascript">
+    google.charts.load('current', {'packages':['gauge']});
+    google.charts.setOnLoadCallback(drawGauges);
+
+    function drawGauges() {
+      fetch('/api/latest-metrics')
+        .then(response => response.json())
+        .then(data => {
+          var batteryValue = data.battery_level;
+          var ramValue = data.ram_usage;
+
+          var batteryData = google.visualization.arrayToDataTable([
+            ['Label', 'Value'],
+            ['Battery', batteryValue]
+          ]);
+          var ramData = google.visualization.arrayToDataTable([
+            ['Label', 'Value'],
+            ['RAM', ramValue]
+          ]);
+
+          var batteryChart = new google.visualization.Gauge(document.getElementById('battery_gauge'));
+          var ramChart = new google.visualization.Gauge(document.getElementById('ram_gauge'));
+
+          batteryChart.draw(batteryData, {
+            width: 300, height: 150,
+            redFrom: 0, redTo: 20,
+            yellowFrom: 20, yellowTo: 40,
+            greenFrom: 40, greenTo: 100,
+            minorTicks: 5,
+            max: 100
+          });
+
+          ramChart.draw(ramData, {
+            width: 300, height: 150,
+            redFrom: 80, redTo: 100,
+            yellowFrom: 60, yellowTo: 80,
+            greenFrom: 0, greenTo: 60,
+            minorTicks: 5,
+            max: 100
+          });
+        })
+        .catch(error => {
+          console.error("Error updating gauges:", error);
+        });
+    }
+  </script>
+
+  <script type="text/javascript">
+    let charts = {};  // Store chart instances globally
+
+    function createChart(ctx, labels, datasetLabels, datasets, colors, chartKey) {
+      if (!ctx) {
+        console.error('Canvas context for ' + chartKey + ' is null!');
+        return;
+      }
+
+      if (labels.length === 0 || datasets[0].length === 0) {
+        ctx.canvas.parentNode.innerHTML = `<p>No ${datasetLabels.join(', ')} data available.</p>`;
+        return;
+      }
+
+      charts[chartKey] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: datasets.map((data, index) => ({
+            label: datasetLabels[index],
+            data: data,
+            borderColor: colors[index],
+            backgroundColor: colors[index].replace('1)', '0.2)'),
+            fill: true
+          }))
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          scales: {
+            x: { title: { display: true, text: 'Time' }},
+            y: { title: { display: true, text: datasetLabels.join(', ') }}
+          }
+        }
+      });
+    }
+
+    function loadCharts() {
+      var ctxNetwork = document.getElementById('networkChart').getContext('2d');
+      var ctxBTC = document.getElementById('bitcoinChart').getContext('2d');
+      var ctxETH = document.getElementById('ethereumChart').getContext('2d');
+      var ctxPriceChange = document.getElementById('priceChangeChart').getContext('2d');
+
+      var networkLabels = {{ network_labels|tojson }};
+      var networkSentData = {{ network_sent_data|tojson }};
+      var networkRecvData = {{ network_recv_data|tojson }};
+
+      var bitcoinLabels = {{ bitcoin_labels|tojson }};
+      var bitcoinPrices = {{ bitcoin_prices|tojson }};
+
+      var ethereumLabels = {{ ethereum_labels|tojson }};
+      var ethereumPrices = {{ ethereum_prices|tojson }};
+
+      var btcChange = {{ bitcoin_change|default([])|tojson }};
+      var ethChange = {{ ethereum_change|default([])|tojson }};
+      var changeLabels = {{ crypto_labels|default([])|tojson }};
+
+      createChart(ctxNetwork, networkLabels,
+        ['Network Sent (bytes)', 'Network Received (bytes)'],
+        [networkSentData, networkRecvData],
+        ['rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)'],
+        'networkChart'
+      );
+
+      createChart(ctxBTC, bitcoinLabels, ['Bitcoin Price (USD)'],
+        [bitcoinPrices], ['rgba(255, 159, 64, 1)'], 'bitcoinChart');
+
+      createChart(ctxETH, ethereumLabels, ['Ethereum Price (USD)'],
+        [ethereumPrices], ['rgba(54, 162, 235, 1)'], 'ethereumChart');
+
+      // Create chart for price change percentage comparison
+      createChart(ctxPriceChange, changeLabels,
+        ['BTC 24h Change %', 'ETH 24h Change %'],
+        [btcChange, ethChange],
+        ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)'],
+        'priceChangeChart'
+      );
+    }
+
+    let commandCooldowns = {};
+
+    function sendCommand(action) {
+      if (commandCooldowns[action]) {
+        alert('Please wait before using ' + action + ' again.');
+        return;
+      }
+
+      console.log("📡 Sending command:", action);
+
+      fetch('/send-command', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: action })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log("✅ Command Response:", data);
+        if (data.error) {
+          alert("Error: " + data.error);
+        } else {
+          alert(action + ' command sent to home PC!');
+          commandCooldowns[action] = 30;
+          updateCooldowns(action);
+        }
+      })
+      .catch(error => console.error("Error sending command:", error));
+    }
+
+    function updateCooldowns(action) {
+      const button = document.querySelector(`button[data-command="${action}"]`);
+      if (!button) return;
+
+      button.disabled = true;
+      let interval = setInterval(() => {
+        if (commandCooldowns[action] > 0) {
+          button.textContent = action.replace('_', ' ') + ' (' + commandCooldowns[action] + 's)';
+          commandCooldowns[action]--;
+        } else {
+          clearInterval(interval);
+          delete commandCooldowns[action];
+          button.disabled = false;
+          button.textContent = action.replace('_', ' ');
+        }
+      }, 1000);
+    }
+
+    function loadMarketCapChart() {
+      var ctxMarketCap = document.getElementById('marketCapChart').getContext('2d');
+      var cryptoLabels = {{ crypto_labels|tojson }};
+      var bitcoinMarketCaps = {{ bitcoin_market_caps|tojson }};
+      var ethereumMarketCaps = {{ ethereum_market_caps|tojson }};
+
+      new Chart(ctxMarketCap, {
+        type: 'line',
+        data: {
+          labels: cryptoLabels,
+          datasets: [
+            {
+              label: 'Bitcoin Market Cap (USD)',
+              data: bitcoinMarketCaps,
+              borderColor: 'rgba(255, 99, 132, 1)',
+              backgroundColor: 'rgba(255, 99, 132, 0.2)',
+              fill: true,
+              tension: 0.1
+            },
+            {
+              label: 'Ethereum Market Cap (USD)',
+              data: ethereumMarketCaps,
+              borderColor: 'rgba(54, 162, 235, 1)',
+              backgroundColor: 'rgba(54, 162, 235, 0.2)',
+              fill: true,
+              tension: 0.1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { title: { display: true, text: 'Time' } },
+            y: { title: { display: true, text: 'Market Cap (USD)' } }
+          }
+        }
+      });
+    }
+
+    function updateCharts(filteredData) {
+      let newLabels = filteredData.map(metric => {
+        let date = new Date(metric.timestamp);
+        return date.toLocaleTimeString();
+      });
+      let newNetworkSent = filteredData.map(metric => metric.network_sent);
+      let newNetworkRecv = filteredData.map(metric => metric.network_recv);
+
+      if (charts['networkChart']) {
+        charts['networkChart'].data.labels = newLabels;
+        charts['networkChart'].data.datasets[0].data = newNetworkSent;
+        charts['networkChart'].data.datasets[1].data = newNetworkRecv;
+        charts['networkChart'].update();
+      }
+      console.log("Charts updated with filtered data.");
+    }
+
+    window.onload = function() {
+      loadCharts();
+      loadMarketCapChart();
+      drawGauges();
+      setInterval(drawGauges, 10000);
+    };
+  </script>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <div class="navbar">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('history') }}">History</a>
+    <button onclick="sendCommand('open_notepad')">📝 Open Notepad</button>
+    <button onclick="sendCommand('open_spotify')">🎵 Open Spotify</button>
+    <button onclick="sendCommand('open_vscode')">💻 Open VS Code</button>
+  </div>
+
+  <h1>Metrics Dashboard</h1>
+
+  <!-- Gauges Section -->
+  <h2>System Metrics Gauges</h2>
+  <div class="gauges">
+    <div id="battery_gauge"></div>
+    <div id="ram_gauge"></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-container">
+    <h2>Network Usage Over Time</h2>
+    <canvas id="networkChart"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <h2>Bitcoin Price Over Time</h2>
+    <canvas id="bitcoinChart"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <h2>Ethereum Price Over Time</h2>
+    <canvas id="ethereumChart"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <h2>Market Cap Comparison</h2>
+    <canvas id="marketCapChart"></canvas>
+  </div>
+
+  <!-- New Price Change Percentage Chart -->
+  <div class="chart-container">
+    <h2>24h Price Change Percentage Comparison</h2>
+    <canvas id="priceChangeChart"></canvas>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Historical Metrics</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    .navbar {
+      background-color: #333;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      padding: 15px;
+    }
+
+    .navbar a {
+      color: white;
+      text-decoration: none;
+      padding: 14px 20px;
+      font-size: 18px;
+      transition: background 0.3s;
+    }
+
+    .navbar a:hover {
+      background-color: #575757;
+      border-radius: 5px;
+    }
+
+    .container {
+      width: 80%;
+      margin: 20px auto;
+      background: #2c2c2c;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #444;
+    }
+
+    /* Pagination Styling */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .pagination a {
+      color: white;
+      padding: 10px 15px;
+      text-decoration: none;
+      background: #444;
+      margin: 0 5px;
+      border-radius: 5px;
+      transition: background 0.3s;
+    }
+
+    .pagination a:hover {
+      background: #575757;
+    }
+
+    .pagination .disabled {
+      color: grey;
+      pointer-events: none;
+      background: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <div class="navbar">
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('history') }}">History</a>
+  </div>
+
+  <h1>Historical Metrics</h1>
+
+  <!-- System Metrics -->
+  <div class="container">
+    <h2>System Metrics</h2>
+    <table>
+      <tr>
+        <th>Timestamp</th>
+        <th>Battery Level</th>
+        <th>RAM Usage</th>
+        <th>Network Sent</th>
+        <th>Network Received</th>
+      </tr>
+      {% for metric in system_metrics %}
+      <tr>
+        <td>{{ metric.timestamp }}</td>
+        <td>{{ metric.battery_level }}%</td>
+        <td>{{ metric.ram_usage }}%</td>
+        <td>{{ metric.network_sent }}</td>
+        <td>{{ metric.network_recv }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <!-- System Metrics Pagination -->
+    <div class="pagination">
+      {% if system_pagination.has_prev %}
+        <a href="{{ url_for('history', page=system_pagination.prev_num) }}">Previous</a>
+      {% else %}
+        <a class="disabled">Previous</a>
+      {% endif %}
+
+      {% for num in system_pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+        {% if num %}
+          {% if num == system_pagination.page %}
+            <a class="disabled"><strong>{{ num }}</strong></a>
+          {% else %}
+            <a href="{{ url_for('history', page=num) }}">{{ num }}</a>
+          {% endif %}
+        {% else %}
+          <span>...</span>
+        {% endif %}
+      {% endfor %}
+
+      {% if system_pagination.has_next %}
+        <a href="{{ url_for('history', page=system_pagination.next_num) }}">Next</a>
+      {% else %}
+        <a class="disabled">Next</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Bitcoin Metrics -->
+  <div class="container">
+    <h2>Bitcoin Metrics</h2>
+    <table>
+      <tr>
+        <th>Timestamp</th>
+        <th>Price (USD)</th>
+        <th>Market Cap</th>
+        <th>Volume (24h)</th>
+      </tr>
+      {% for metric in bitcoin_metrics %}
+      <tr>
+        <td>{{ metric.timestamp }}</td>
+        <td>${{ metric.price_usd }}</td>
+        <td>${{ metric.market_cap_usd }}</td>
+        <td>${{ metric.volume_24h_usd }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <!-- Bitcoin Metrics Pagination -->
+    <div class="pagination">
+      {% if bitcoin_pagination.has_prev %}
+        <a href="{{ url_for('history', page=bitcoin_pagination.prev_num) }}">Previous</a>
+      {% else %}
+        <a class="disabled">Previous</a>
+      {% endif %}
+
+      {% for num in bitcoin_pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+        {% if num %}
+          {% if num == bitcoin_pagination.page %}
+            <a class="disabled"><strong>{{ num }}</strong></a>
+          {% else %}
+            <a href="{{ url_for('history', page=num) }}">{{ num }}</a>
+          {% endif %}
+        {% else %}
+          <span>...</span>
+        {% endif %}
+      {% endfor %}
+
+      {% if bitcoin_pagination.has_next %}
+        <a href="{{ url_for('history', page=bitcoin_pagination.next_num) }}">Next</a>
+      {% else %}
+        <a class="disabled">Next</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Ethereum Metrics -->
+  <div class="container">
+    <h2>Ethereum Metrics</h2>
+    <table>
+      <tr>
+        <th>Timestamp</th>
+        <th>Price (USD)</th>
+        <th>Market Cap</th>
+        <th>Volume (24h)</th>
+      </tr>
+      {% for metric in ethereum_metrics %}
+      <tr>
+        <td>{{ metric.timestamp }}</td>
+        <td>${{ metric.price_usd }}</td>
+        <td>${{ metric.market_cap_usd }}</td>
+        <td>${{ metric.volume_24h_usd }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <!-- Ethereum Metrics Pagination -->
+    <div class="pagination">
+      {% if ethereum_pagination.has_prev %}
+        <a href="{{ url_for('history', page=ethereum_pagination.prev_num) }}">Previous</a>
+      {% else %}
+        <a class="disabled">Previous</a>
+      {% endif %}
+
+      {% for num in ethereum_pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+        {% if num %}
+          {% if num == ethereum_pagination.page %}
+            <a class="disabled"><strong>{{ num }}</strong></a>
+          {% else %}
+            <a href="{{ url_for('history', page=num) }}">{{ num }}</a>
+          {% endif %}
+        {% else %}
+          <span>...</span>
+        {% endif %}
+      {% endfor %}
+
+      {% if ethereum_pagination.has_next %}
+        <a href="{{ url_for('history', page=ethereum_pagination.next_num) }}">Next</a>
+      {% else %}
+        <a class="disabled">Next</a>
+      {% endif %}
+    </div>
+  </div>
+
+</body>
+</html>
